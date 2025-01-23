@@ -59,9 +59,9 @@ export const PropertyMap = () => {
   }, [mapStyle]);
 
   return (
-    <>
-      <div ref={mapContainer} className="absolute inset-0" />
-      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-2">
+    <div className="relative w-full h-full">
+      <div ref={mapContainer} className="w-full h-full min-h-[500px]" />
+      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-2 z-10">
         <select 
           className="p-2 border rounded"
           onChange={(e) => setMapStyle(e.target.value)}
@@ -72,6 +72,6 @@ export const PropertyMap = () => {
           <option value="mapbox://styles/mapbox/terrain-v2">Gelände</option>
         </select>
       </div>
-    </>
+    </div>
   );
 };
