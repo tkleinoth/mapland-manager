@@ -12,51 +12,63 @@ export const PropertyMap = () => {
   const [token, setToken] = useState('');
   const [isMapInitialized, setIsMapInitialized] = useState(false);
 
+  // Cleanup function to properly dispose of the map instance
+  const cleanupMap = () => {
+    if (map.current) {
+      map.current.remove();
+      map.current = null;
+      setIsMapInitialized(false);
+    }
+  };
+
   const initializeMap = () => {
     if (!token) {
       toast.error('Please enter a Mapbox token');
       return;
     }
 
-    if (!mapContainer.current || map.current) return;
+    // Clean up existing map instance if it exists
+    cleanupMap();
+
+    if (!mapContainer.current) return;
 
     try {
       mapboxgl.accessToken = token;
       
-      map.current = new mapboxgl.Map({
+      const newMap = new mapboxgl.Map({
         container: mapContainer.current,
         style: mapStyle,
         center: [10.4515, 51.1657], // Center of Germany
         zoom: 6
       });
 
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      newMap.addControl(new mapboxgl.NavigationControl(), 'top-right');
 
-      map.current.on('style.load', () => {
+      newMap.on('style.load', () => {
         console.log('Map style loaded successfully');
         setIsMapInitialized(true);
         toast.success('Map loaded successfully');
       });
 
-      map.current.on('error', (e) => {
+      newMap.on('error', (e) => {
         console.error('Map error:', e);
         toast.error('Error loading map. Please check your token and try again.');
+        cleanupMap();
       });
+
+      map.current = newMap;
 
     } catch (error) {
       console.error('Error initializing map:', error);
       toast.error('Failed to initialize map. Please check your token and try again.');
+      cleanupMap();
     }
   };
 
   // Cleanup effect
   useEffect(() => {
     return () => {
-      if (map.current) {
-        map.current.remove();
-        map.current = null;
-        setIsMapInitialized(false);
-      }
+      cleanupMap();
     };
   }, []);
 
