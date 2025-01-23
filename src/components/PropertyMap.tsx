@@ -2,19 +2,27 @@ import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { toast } from "sonner";
-
-// Set the access token directly on mapboxgl
-mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHMxYXB5YmkwMGl1MmpteXB4NWY5Y2VqIn0.qX-PZ6mJwwqzxPrGh6Mf9g';
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
 
 export const PropertyMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapStyle, setMapStyle] = useState('mapbox://styles/mapbox/streets-v11');
+  const [token, setToken] = useState('');
+  const [isMapInitialized, setIsMapInitialized] = useState(false);
 
-  useEffect(() => {
+  const initializeMap = () => {
+    if (!token) {
+      toast.error('Please enter a Mapbox token');
+      return;
+    }
+
     if (!mapContainer.current || map.current) return;
 
     try {
+      mapboxgl.accessToken = token;
+      
       map.current = new mapboxgl.Map({
         container: mapContainer.current,
         style: mapStyle,
@@ -26,29 +34,35 @@ export const PropertyMap = () => {
 
       map.current.on('style.load', () => {
         console.log('Map style loaded successfully');
+        setIsMapInitialized(true);
+        toast.success('Map loaded successfully');
       });
 
       map.current.on('error', (e) => {
         console.error('Map error:', e);
-        toast.error('Error loading map. Please try again later.');
+        toast.error('Error loading map. Please check your token and try again.');
       });
 
     } catch (error) {
       console.error('Error initializing map:', error);
-      toast.error('Failed to initialize map. Please check your connection and try again.');
+      toast.error('Failed to initialize map. Please check your token and try again.');
     }
+  };
 
+  // Cleanup effect
+  useEffect(() => {
     return () => {
       if (map.current) {
         map.current.remove();
         map.current = null;
+        setIsMapInitialized(false);
       }
     };
-  }, []); // Only run on mount
+  }, []);
 
   // Effect for handling style changes
   useEffect(() => {
-    if (map.current) {
+    if (map.current && isMapInitialized) {
       try {
         map.current.setStyle(mapStyle);
       } catch (error) {
@@ -56,21 +70,37 @@ export const PropertyMap = () => {
         toast.error('Failed to change map style');
       }
     }
-  }, [mapStyle]);
+  }, [mapStyle, isMapInitialized]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={mapContainer} className="w-full h-full min-h-[500px]" />
-      <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-2 z-10">
-        <select 
-          className="p-2 border rounded"
-          onChange={(e) => setMapStyle(e.target.value)}
-          value={mapStyle}
-        >
-          <option value="mapbox://styles/mapbox/streets-v11">Straßen</option>
-          <option value="mapbox://styles/mapbox/satellite-v9">Satellit</option>
-          <option value="mapbox://styles/mapbox/terrain-v2">Gelände</option>
-        </select>
+    <div className="flex flex-col gap-4 w-full">
+      {!isMapInitialized && (
+        <div className="flex gap-2 items-center">
+          <Input
+            type="text"
+            placeholder="Enter your Mapbox token"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            className="flex-1"
+          />
+          <Button onClick={initializeMap}>Initialize Map</Button>
+        </div>
+      )}
+      <div className="relative w-full h-full">
+        <div ref={mapContainer} className="w-full h-full min-h-[500px] rounded-lg" />
+        {isMapInitialized && (
+          <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-2 z-10">
+            <select 
+              className="p-2 border rounded"
+              onChange={(e) => setMapStyle(e.target.value)}
+              value={mapStyle}
+            >
+              <option value="mapbox://styles/mapbox/streets-v11">Straßen</option>
+              <option value="mapbox://styles/mapbox/satellite-v9">Satellit</option>
+              <option value="mapbox://styles/mapbox/terrain-v2">Gelände</option>
+            </select>
+          </div>
+        )}
       </div>
     </div>
   );
