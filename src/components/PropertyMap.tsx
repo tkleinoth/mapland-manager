@@ -1,6 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import { toast } from "sonner";
+
+// Set the access token directly on mapboxgl
+mapboxgl.accessToken = 'pk.eyJ1IjoibG92YWJsZSIsImEiOiJjbHMxYXB5YmkwMGl1MmpteXB4NWY5Y2VqIn0.qX-PZ6mJwwqzxPrGh6Mf9g';
 
 export const PropertyMap = () => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -8,28 +12,51 @@ export const PropertyMap = () => {
   const [mapStyle, setMapStyle] = useState('mapbox://styles/mapbox/streets-v11');
 
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (!mapContainer.current || map.current) return;
 
-    // Temporärer Token - Bitte ersetzen Sie diesen durch Ihren eigenen Token
-    mapboxgl.accessToken = 'BITTE_FÜGEN_SIE_IHREN_MAPBOX_TOKEN_EIN';
-    
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: mapStyle,
-      center: [10.4515, 51.1657], // Zentrum von Deutschland
-      zoom: 6
-    });
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: mapStyle,
+        center: [10.4515, 51.1657], // Center of Germany
+        zoom: 6
+      });
 
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+      map.current.on('style.load', () => {
+        console.log('Map style loaded successfully');
+      });
+
+      map.current.on('error', (e) => {
+        console.error('Map error:', e);
+        toast.error('Error loading map. Please try again later.');
+      });
+
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      toast.error('Failed to initialize map. Please check your connection and try again.');
+    }
 
     return () => {
-      map.current?.remove();
+      if (map.current) {
+        map.current.remove();
+        map.current = null;
+      }
     };
-  }, [mapStyle]);
+  }, []); // Only run on mount
 
-  const changeMapStyle = (style: string) => {
-    setMapStyle(style);
-  };
+  // Effect for handling style changes
+  useEffect(() => {
+    if (map.current) {
+      try {
+        map.current.setStyle(mapStyle);
+      } catch (error) {
+        console.error('Error changing map style:', error);
+        toast.error('Failed to change map style');
+      }
+    }
+  }, [mapStyle]);
 
   return (
     <>
@@ -37,7 +64,7 @@ export const PropertyMap = () => {
       <div className="absolute top-4 left-4 bg-white rounded-lg shadow-lg p-2">
         <select 
           className="p-2 border rounded"
-          onChange={(e) => changeMapStyle(e.target.value)}
+          onChange={(e) => setMapStyle(e.target.value)}
           value={mapStyle}
         >
           <option value="mapbox://styles/mapbox/streets-v11">Straßen</option>
